@@ -1,0 +1,10 @@
+# Browser-capture and analytics artifacts
+static.cloudflareinsights.com/
+www.google-analytics.com/
+www.googletagmanager.com/
+talantasports/cdn-cgi/rum.html
+
+# Local editor and operating-system files
+.vscode/
+Thumbs.db
+Desktop.ini

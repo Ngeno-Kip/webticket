@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Select seats · Bayern Munich vs Ajax</title>
+    <style>
+        :root { font-family: Arial, sans-serif; color: #17202b; background: #eef2f7; }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-width: 320px; background: #eef2f7; }
+        body.dark-mode { background: #0e0c10; color: #f5f1ea; }
+        button { font: inherit; cursor: pointer; }
+        .topbar { height: 64px; display: flex; align-items: center; gap: 12px; padding: 8px 18px; background: #fff; border-bottom: 1px solid #dfe4ea; }
+        .back { width: 34px; height: 34px; border: 0; background: #f0f0ed; font-size: 24px; color: #59616b; }
+        .event-thumb { width: 40px; height: 40px; object-fit: cover; }
+        .event-title { font-weight: 700; font-size: 14px; }
+        .event-meta { color: #84909d; font-size: 10px; margin-top: 2px; }
+        .top-actions { margin-left: auto; display: flex; align-items: center; gap: 18px; font-size: 13px; font-weight: 700; }
+        .icon-button { border: 0; background: transparent; font-size: 18px; }
+        .icon-button[aria-label*="theme"] { min-width: 28px; }
+        .login-link { color: inherit; text-decoration: none; }
+        .login-link:hover, .login-link:focus { text-decoration: underline; }
+        .page { display: grid; grid-template-columns: minmax(0, 1fr) 360px; min-height: calc(100vh - 64px); }
+        .map-area { position: relative; min-height: 650px; padding: 26px; background: #eef2f7; overflow: hidden; }
+        .map-tools { display: flex; gap: 5px; position: absolute; top: 12px; left: 12px; z-index: 2; }
+        .map-tools button { width: 28px; height: 28px; border: 1px solid #d9dfe7; background: #fff; font-weight: 700; }
+        .map-wrap { --map-zoom: 1; width: min(900px, 100%); aspect-ratio: 1280 / 659; margin: 15px auto; position: relative; background: transparent; transform: scale(var(--map-zoom)); transform-origin: center center; transition: transform .2s ease; }
+        .real-map { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+        .map-wrap .stadium, .map-wrap .pitch, .map-wrap .map-label { display: none; }
+        .map-wrap .section { opacity: 0; border: 0; background: transparent; color: transparent; }
+        .stadium { position: absolute; inset: 5%; border-radius: 48% 48% 45% 45%; background: #d3d9e1; transform: perspective(500px) rotateX(4deg); box-shadow: inset 0 0 0 20px #c3cbd5, inset 0 0 0 52px #e8edf2; }
+        .stadium::before { content: ''; position: absolute; inset: 19%; border-radius: 46%; background: #f5f6f7; box-shadow: inset 0 0 0 22px #d5dbe2, inset 0 0 0 48px #f2f4f6; }
+        .pitch { position: absolute; inset: 32% 29%; background: #8fd09e; border: 4px solid #e4f3e7; box-shadow: inset 0 0 0 2px #75bd87; z-index: 1; }
+        .pitch::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; border-left: 2px solid #e4f3e7; }
+        .pitch::after { content: ''; position: absolute; left: 38%; top: 30%; width: 24%; height: 33%; border: 2px solid #e4f3e7; border-radius: 50%; }
+        .section { position: absolute; z-index: 3; border: 1px solid #aeb8c4; border-radius: 4px; background: #c4ccd6; color: #4e5965; font-size: 10px; padding: 7px 4px; min-width: 35px; text-align: center; }
+        .section:hover, .section.selected { background: #bc0000; color: #fff; border-color: #8d0000; }
+        .s1 { top: 3%; left: 42%; } .s2 { top: 8%; left: 54%; } .s3 { top: 18%; left: 67%; } .s4 { top: 36%; left: 78%; } .s5 { top: 57%; left: 76%; } .s6 { bottom: 7%; left: 61%; } .s7 { bottom: 4%; left: 43%; } .s8 { bottom: 10%; left: 25%; } .s9 { top: 58%; left: 8%; } .s10 { top: 36%; left: 8%; } .s11 { top: 17%; left: 20%; } .s12 { top: 9%; left: 31%; }
+        .map-label { position: absolute; z-index: 4; font-size: 10px; font-weight: 700; color: #65717e; } .north { top: 0; left: 48%; } .south { bottom: 0; left: 47%; } .east { top: 48%; right: 0; } .west { top: 48%; left: 0; }
+        .legend { position: absolute; right: 18px; top: 14px; padding: 10px; background: #fff; font-size: 11px; line-height: 1.8; box-shadow: 0 1px 4px #cfd5dc; }
+        .dot { display: inline-block; width: 8px; height: 8px; margin-right: 5px; background: #6ab488; } .dot.selected { background: #bd0000; } .dot.taken { background: #59636d; }
+        .side { background: #fff; border-left: 1px solid #dfe4ea; padding: 18px 12px; }
+        .side-head { display: flex; align-items: center; justify-content: space-between; font-weight: 700; margin-bottom: 14px; }
+        .counter { display: flex; align-items: center; gap: 15px; } .counter button { width: 28px; height: 28px; border: 1px solid #cfd5dc; background: #fff; } .count { font-size: 18px; }
+        .ticket-cards { display: flex; gap: 6px; overflow: hidden; margin-bottom: 14px; } .ticket-card { flex: 0 0 105px; border: 1px solid #d8dde4; padding: 12px 8px; color: #a0a7af; font-size: 11px; } .ticket-card strong { display: block; color: #8e969f; margin-top: 4px; }
+        .find { width: 100%; padding: 13px; color: #fff; border: 0; background: #67b38b; font-weight: 700; } .find:hover { background: #4f9f76; }
+        .choose { display: flex; justify-content: space-between; align-items: center; margin: 15px 0 8px; font-size: 13px; font-weight: 700; } .tabs button { border: 1px solid #e1e4e8; padding: 7px; background: #fff; font-size: 11px; } .tabs .active { background: #f0eee9; font-weight: 700; }
+        .groups { border-top: 1px solid #e3e6ea; } .group { border-bottom: 1px solid #e3e6ea; padding: 15px 5px; cursor: pointer; } .group strong { display: block; font-size: 13px; } .group small { color: #9aa2ab; display: block; margin-top: 4px; } .group::after { content: '⌄'; float: right; margin-top: -27px; color: #77818c; }
+        .status { margin-top: 12px; padding: 10px; background: #eef8f1; color: #2b7048; font-size: 12px; display: none; }
+        body.dark-mode .topbar, body.dark-mode .side { color: #f5f1ea; background: #18151c; border-color: #3b3540; }
+        body.dark-mode .map-area { background: #0e0c10; }
+        body.dark-mode .back, body.dark-mode .map-tools button, body.dark-mode .counter button, body.dark-mode .tabs button { color: #f5f1ea; background: #211d26; border-color: #49414e; }
+        body.dark-mode .legend, body.dark-mode .ticket-card { color: #f5f1ea; background: #211d26; border-color: #49414e; }
+        body.dark-mode .ticket-card strong, body.dark-mode .event-meta, body.dark-mode .group small { color: #b6aeb9; }
+        body.dark-mode .groups, body.dark-mode .group { border-color: #3b3540; }
+        body.dark-mode .group::after { color: #b6aeb9; }
+        body.dark-mode .tabs .active { background: #3a3340; }
+        body.dark-mode .icon-button { color: #f5f1ea; }
+        @media (max-width: 850px) { .page { grid-template-columns: 1fr; } .map-area { min-height: 480px; } .side { border-left: 0; border-top: 1px solid #dfe4ea; } .legend { right: 10px; } }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <button class="back" onclick="history.back()" aria-label="Go back">‹</button>
+        <img class="event-thumb" src="../../../brand/stadium/stadium-exterior.png" alt="Stadium">
+        <div><div class="event-title">Bayern Munich vs Ajax</div><div class="event-meta">Tue 5 Jan 2027 · 11:00 · Raila Odinga International Stadium, Nairobi</div></div>
+        <div class="top-actions"><button class="icon-button" aria-label="Share">♧</button><button class="icon-button" id="theme-toggle" aria-label="Switch to dark mode">☾</button><a class="login-link" href="../../../login/">Log in</a></div>
+    </header>
+    <main class="page">
+        <section class="map-area" aria-label="Select seats on stadium map">
+            <div class="map-tools"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="reset-map" aria-label="Reset map">⟳</button></div>
+            <div class="legend"><div><span class="dot"></span>Available</div><div><span class="dot selected"></span>Selected</div><div><span class="dot taken"></span>Taken</div><div>▧ Your seats</div><div>▨ Sold out</div></div>
+            <div class="map-wrap" id="map">
+                <img class="real-map" src="../../../brand/stadium/stadium-seating-map-transparent.png" alt="Stadium seating map">
+                <div class="stadium"></div><div class="pitch"></div>
+                <button class="section s1" data-section="401">401</button><button class="section s2" data-section="402">402</button><button class="section s3" data-section="403">403</button><button class="section s4" data-section="404">404</button><button class="section s5" data-section="405">405</button><button class="section s6" data-section="415">415</button><button class="section s7" data-section="416">416</button><button class="section s8" data-section="417">417</button><button class="section s9" data-section="418">418</button><button class="section s10" data-section="419">419</button><button class="section s11" data-section="420">420</button><button class="section s12" data-section="421">421</button>
+                <span class="map-label north">NORTH</span><span class="map-label south">SOUTH</span><span class="map-label east">EAST</span><span class="map-label west">WEST</span>
+            </div>
+        </section>
+        <aside class="side">
+            <div class="side-head"><span>Tickets</span><div class="counter"><button id="minus">−</button><span class="count" id="count">2</span><button id="plus">+</button></div></div>
+            <div class="ticket-cards"><div class="ticket-card">Phase 1 · Level 3<strong>Sold out</strong></div><div class="ticket-card">Phase 1 · Level 3<strong>Sold out</strong></div><div class="ticket-card">Phase 1 · Level 3<strong>Coming soon</strong></div></div>
+            <button class="find" id="find">Find my seats</button>
+            <div class="choose"><span>Or choose a section</span><div class="tabs"><button class="active">Cheapest</button><button>Section</button></div></div>
+            <div class="groups"><div class="group"><strong>Level 1</strong><small>Sections 101–128 · 28 sections<br>Not yet on sale</small></div><div class="group"><strong>Level 2</strong><small>Sections 201–220 · 20 sections<br>Not yet on sale</small></div><div class="group"><strong>Level 3</strong><small>Sections 401–435 · 35 sections<br>Not yet on sale</small></div><div class="group"><strong>Gold</strong><small>5 sections<br>Not yet on sale</small></div><div class="group"><strong>Platinum</strong><small>3 sections<br>Not yet on sale</small></div><div class="group"><strong>Skyboxes</strong><small>Boxes 301–350 · 50 sections<br>Not yet on sale</small></div><div class="group"><strong>Accessible</strong><small>28 sections<br>Not yet on sale</small></div></div>
+            <div class="status" id="status"></div>
+        </aside>
+    </main>
+    <script>
+        var count = 2;
+        var countLabel = document.getElementById('count');
+        document.getElementById('minus').onclick = function () { count = Math.max(1, count - 1); countLabel.textContent = count; };
+        document.getElementById('plus').onclick = function () { count = Math.min(8, count + 1); countLabel.textContent = count; };
+        var map = document.getElementById('map');
+        var mapZoom = 1;
+        function setMapZoom(value) {
+            mapZoom = Math.max(1, Math.min(2.5, value));
+            map.style.setProperty('--map-zoom', mapZoom);
+        }
+        document.getElementById('zoom-in').onclick = function () { setMapZoom(mapZoom + 0.25); };
+        document.getElementById('zoom-out').onclick = function () { setMapZoom(mapZoom - 0.25); };
+        document.getElementById('reset-map').onclick = function () { setMapZoom(1); };
+        document.querySelectorAll('.section').forEach(function (section) { section.onclick = function () { document.querySelectorAll('.section').forEach(function (item) { item.classList.remove('selected'); }); section.classList.add('selected'); document.getElementById('status').style.display = 'block'; document.getElementById('status').textContent = 'Section ' + section.dataset.section + ' selected for ' + count + ' tickets.'; }; });
+        document.getElementById('find').onclick = function () { var status = document.getElementById('status'); status.style.display = 'block'; status.textContent = 'Choose a highlighted stadium section to find available seats.'; };
+        var themeToggle = document.getElementById('theme-toggle');
+        function applyTheme(theme) {
+            var dark = theme === 'dark';
+            document.body.classList.toggle('dark-mode', dark);
+            themeToggle.textContent = dark ? '☀' : '☾';
+            themeToggle.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+            try { localStorage.setItem('webticket-theme', dark ? 'dark' : 'light'); } catch (ignore) {}
+        }
+        var savedTheme = 'light';
+        try { savedTheme = localStorage.getItem('webticket-theme') || 'light'; } catch (ignore) {}
+        applyTheme(savedTheme);
+        themeToggle.onclick = function () { applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark'); };
+    </script>
+</body>
+</html>

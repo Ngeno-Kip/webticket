@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About the Stadium · Talanta Sports City</title>
+  <style>
+    :root {
+      --paper: #f6f4f0;
+      --ink: #18151b;
+      --body: #4b4650;
+      --green: #087a3d;
+      --night: #0e0c10;
+      --card: #ffffff;
+      --line: #ded9d1;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--body);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+    body.dark-mode { --paper: #151219; --ink: #f5f1ea; --body: #d2cbd2; --card: #211d26; --line: #49414e; }
+    a { color: inherit; }
+    .site-header {
+      background: var(--night);
+      color: #fff;
+      padding: 18px 6vw;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .brand {
+      color: #fff;
+      font-size: clamp(20px, 3vw, 32px);
+      font-weight: 900;
+      letter-spacing: .02em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    .back-link {
+      color: #bce7cc;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .back-link:hover, .back-link:focus { text-decoration: underline; }
+    .header-actions { display: flex; align-items: center; gap: 14px; }
+    .theme-toggle { border: 1px solid #77717a; border-radius: 999px; padding: 7px 12px; color: #fff; background: transparent; font-size: 12px; font-weight: 700; cursor: pointer; }
+    main { padding: 58px 24px 80px; }
+    .content {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1, h2 {
+      margin: 0;
+      color: var(--ink);
+      font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+      font-weight: 400;
+      letter-spacing: .01em;
+      text-transform: uppercase;
+    }
+    h1 { font-size: clamp(38px, 7vw, 72px); line-height: .98; }
+    h2 { margin-top: 42px; font-size: clamp(28px, 4vw, 42px); line-height: 1; }
+    p { margin: 17px 0 0; font-size: 16px; }
+    .lead { margin-top: 24px; font-size: 18px; color: var(--ink); }
+    .welcome { margin-top: 50px; }
+    .site-footer {
+      background: var(--night);
+      color: #d3cbd0;
+      padding: 30px 6vw;
+      text-align: center;
+      font-size: 13px;
+    }
+    .site-footer a { color: #fff; font-weight: 700; text-decoration: none; }
+    .site-footer a:hover, .site-footer a:focus { text-decoration: underline; }
+    @media (max-width: 600px) {
+      .site-header { padding: 16px 20px; }
+      .back-link { font-size: 12px; }
+      main { padding: 40px 22px 58px; }
+      p { font-size: 15px; }
+      .lead { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="../">Talanta Sports City</a>
+    <div class="header-actions">
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode">☾ Dark mode</button>
+      <a class="back-link" href="../">Back to event</a>
+    </div>
+  </header>
+
+  <main>
+    <article class="content">
+      <p class="eyebrow">About the stadium</p>
+      <h1>Raila Odinga International Stadium</h1>
+
+      <p class="lead">The Raila Odinga International Stadium at Talanta Sports City is a 60,000-seat venue designed to welcome the world's best athletes, leading international competitions, live entertainment and the fans who make every occasion extraordinary.</p>
+
+      <p>It represents Kenya's ambition to build a lasting home for major events. From international football fixtures and continental tournaments to concerts and major cultural celebrations, the stadium is intended to provide a stage for events that capture the imagination of audiences in Kenya and beyond.</p>
+
+      <p>It bears the name of the late Rt. Hon. Raila Amolo Odinga, former Prime Minister of the Republic of Kenya, in recognition of his contribution to Kenya's democratic journey and national development. Its name connects a new national landmark to a legacy of public service, resilience and belief in Kenya's potential.</p>
+
+      <p>As future generations of athletes and supporters make their own memories here, the stadium will stand as a reminder of the power of shared ambition and national purpose.</p>
+
+      <section>
+        <h2>A home for generations</h2>
+        <p>Great stadiums are remembered for the events they host and for the memories they create. They are places where children discover their heroes, families celebrate together, athletes achieve lifelong dreams and communities share moments that endure.</p>
+
+        <p>The ambition for the Raila Odinga International Stadium is to become such a place: a home for sporting excellence, live entertainment and experiences that connect Kenya to the world.</p>
+      </section>
+
+      <section>
+        <h2>The road to AFCON 2027</h2>
+        <p>The Raila Odinga International Stadium is a significant part of Kenya's preparations to co-host the 2027 Africa Cup of Nations alongside Uganda and Tanzania under the PAMOJA partnership.</p>
+
+        <p>The stadium's inauguration, scheduled for 5th January 2027 with an international friendly between FC Bayern Munich and AFC Ajax Amsterdam, will also provide an opportunity to test key event operations ahead of the tournament.</p>
+
+        <p>These preparations will complement the formal inspections, standards and approvals required for AFCON 2027.</p>
+      </section>
+
+      <section class="welcome">
+        <h2>Welcome to the Raila Odinga International Stadium.</h2>
+      </section>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <a href="../">Talanta Sports City</a> · Ngong Rd, Nairobi
+  </footer>
+  <script>
+    var themeToggle = document.getElementById('theme-toggle');
+    function applyTheme(theme) {
+      var dark = theme === 'dark';
+      document.body.classList.toggle('dark-mode', dark);
+      themeToggle.textContent = dark ? '☀ Light mode' : '☾ Dark mode';
+      themeToggle.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+      try { localStorage.setItem('webticket-theme', dark ? 'dark' : 'light'); } catch (ignore) {}
+    }
+    var savedTheme = 'light';
+    try { savedTheme = localStorage.getItem('webticket-theme') || 'light'; } catch (ignore) {}
+    applyTheme(savedTheme);
+    themeToggle.addEventListener('click', function () { applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark'); });
+  </script>
+</body>
+</html>
