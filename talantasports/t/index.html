@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your ticket · Talanta Sports City</title>
+  <script>
+    (function () {
+      var prefix = /\/t\/[^/]+\/?$/.test(window.location.pathname) ? '../../' : '../';
+      document.write('<link rel="stylesheet" href="' + prefix + 'resale.css">');
+      document.write('<script src="' + prefix + 'resale-app.js"><\\/script>');
+    }());
+  </script>
+</head>
+<body>
+  <script>WT.boot();</script>
+  <div id="shell"></div>
+  <main class="page" id="main"></main>
+  <footer><a href="../">Talanta Sports City</a> · Your signed ticket link is private and expires.</footer>
+  <script>
+    (function () {
+      var main = document.getElementById('main'), token = new URLSearchParams(window.location.search).get('token') || 'demo-transfer-418f', transfer, qrTimer;
+      function findTransfer() { transfer = WT.getTransfers().filter(function (item) { return item.token === token; })[0]; return transfer; }
+      var tokenRoute = /\/t\/[^/]+\/?$/.test(window.location.pathname), rootPrefix = tokenRoute ? '../../' : '../';
+      document.querySelector('footer a').href = rootPrefix;
+      function render() {
+        document.getElementById('shell').innerHTML = WT.nav(rootPrefix, '', false);
+        findTransfer();
+        if (!transfer || transfer.status !== 'active' || transfer.expiresAt <= WT.now()) { main.innerHTML = '<p class="eyebrow">Secure client link</p><h1>Link unavailable</h1><div class="notice error">This transfer link has expired, been revoked, or does not exist. Ask the reseller to issue a new transfer.</div>'; return; }
+        var ticket = WT.getTicket(transfer.ticketKey);
+        if (!transfer.clientOtpVerified) { main.innerHTML = '<p class="eyebrow">You\'ve received a ticket</p><h1>Verify your phone</h1><p class="lede">A one-time code was sent to <strong>' + WT.esc(transfer.phone) + '</strong>. Enter it to open your ticket. No account is required.</p><section class="card" style="max-width:520px"><div class="field"><label for="send-client-otp">Phone verification</label><button class="button" id="send-client-otp" type="button">Send client OTP</button></div><div id="client-code-area" style="display:none;margin-top:20px"><div class="notice">In this local prototype, the SMS code is shown below. Production sends it only to the client phone.</div><div class="otp-code" id="client-demo-code"></div><div class="otp-boxes" id="client-otp-boxes"><input class="otp-box" inputmode="numeric" maxlength="1"><input class="otp-box" inputmode="numeric" maxlength="1"><input class="otp-box" inputmode="numeric" maxlength="1"><input class="otp-box" inputmode="numeric" maxlength="1"><input class="otp-box" inputmode="numeric" maxlength="1"><input class="otp-box" inputmode="numeric" maxlength="1"></div><button class="button" id="verify-client-otp" type="button">Open my ticket</button></div></section>'; var readOtp = WT.otpInputs(document.getElementById('client-otp-boxes')); document.getElementById('send-client-otp').addEventListener('click', function () { var code = WT.sendOtp(transfer.phone, 'client-ticket-' + transfer.token); document.getElementById('client-code-area').style.display = 'block'; document.getElementById('client-demo-code').textContent = 'Demo client OTP: ' + code; }); document.getElementById('verify-client-otp').addEventListener('click', function () { if (!WT.verifyOtp(transfer.phone, 'client-ticket-' + transfer.token, readOtp())) { WT.toast('That client OTP is invalid or expired.', 'error'); return; } var rows = WT.getTransfers(); rows.filter(function (item) { return item.token === token; })[0].clientOtpVerified = true; WT.write(WT.KEYS.transfers, rows); WT.audit('client.otp.verified', 'Client phone verified for transfer ' + transfer.id); WT.toast('Verified. Your ticket is ready.'); render(); }); return; }
+        main.innerHTML = '<p class="eyebrow">Digital ticket · verified holder</p><h1>Welcome, ' + WT.esc(transfer.clientName.split(' ')[0]) + '</h1><p class="lede">This ticket is protected by a short-lived rotating QR token. Keep the screen bright at the gate and do not share this link.</p><section class="ticket-pass watermark"><div class="pass-event">' + WT.esc(WT.EVENT.name) + '</div><p class="muted">' + WT.esc(WT.EVENT.date) + ' · ' + WT.esc(WT.EVENT.time) + ' · ' + WT.esc(WT.EVENT.venue) + '</p><dl><div><dt>Gate</dt><dd>' + WT.esc(ticket.gate) + '</dd></div><div><dt>Holder</dt><dd>' + WT.esc(transfer.clientName) + '</dd></div><div><dt>Section</dt><dd>' + WT.esc(ticket.section) + '</dd></div><div><dt>Row / Seat</dt><dd>' + WT.esc(ticket.row) + ' / ' + WT.esc(ticket.seat) + '</dd></div></dl><div class="qr-card"><div id="qr" class="qr-grid" aria-label="Rotating ticket QR code"></div><p class="help" data-qr-label>Rotating secure code</p></div><p class="help" style="margin-top:16px">Link expires ' + WT.dateTime(transfer.expiresAt) + '. QR tokens are signed server-side in production and never contain the raw ticket ID.</p></section><div class="action-row"><button class="button secondary" id="print-ticket" type="button">Download watermarked PDF</button><button class="button secondary" id="apple-wallet" type="button">Add to Apple Wallet</button><button class="button secondary" id="google-wallet" type="button">Add to Google Wallet</button></div><div class="notice">Wallet and PDF fallbacks carry the same watermarked seat details. Gate staff still validates the rotating token server-side.</div>';
+        WT.qr(document.getElementById('qr'), transfer.token); window.clearInterval(qrTimer); qrTimer = window.setInterval(function () { if (document.getElementById('qr')) WT.qr(document.getElementById('qr'), transfer.token); }, WT.settings().qrTtlSeconds * 1000); document.getElementById('print-ticket').addEventListener('click', function () { window.print(); }); document.getElementById('apple-wallet').addEventListener('click', function () { WT.toast('Apple Wallet pass queued for this prototype.'); }); document.getElementById('google-wallet').addEventListener('click', function () { WT.toast('Google Wallet pass queued for this prototype.'); });
+      }
+      render();
+    }());
+  </script>
+</body>
+</html>

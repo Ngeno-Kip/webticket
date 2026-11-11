@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reseller portal · Talanta Sports City</title>
+  <link rel="stylesheet" href="../resale.css">
+</head>
+<body>
+  <script src="../resale-app.js"></script>
+  <script>WT.boot();</script>
+  <div id="shell"></div>
+  <main class="page" id="main"></main>
+  <footer><a href="../">Talanta Sports City</a> · Resale inventory is protected by OTP, signed links, and audit logging.</footer>
+  <div class="modal-backdrop" id="list-modal">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="list-title">
+      <button class="modal-close" type="button" data-close-modal>×</button>
+      <h2 id="list-title">List for resale</h2>
+      <p class="muted" id="selected-summary"></p>
+      <form id="listing-form">
+        <div class="form-grid">
+          <div class="field"><label for="asking-price">Asking price per ticket</label><input id="asking-price" type="number" min="1" step="50" required><span class="help" id="price-help"></span></div>
+          <div class="field"><label for="listing-quantity">Quantity</label><input id="listing-quantity" type="number" min="1" required></div>
+          <div class="field"><label for="visibility">Visibility</label><select id="visibility"><option value="public">Public marketplace</option><option value="private">Private · link only</option></select></div>
+          <div class="field"><label for="expiry">Auto-withdraw date</label><input id="expiry" type="date" required></div>
+        </div>
+        <div class="action-row"><button class="button" type="submit">Publish listing</button><button class="button secondary" type="button" data-close-modal>Cancel</button></div>
+      </form>
+    </section>
+  </div>
+  <script>
+    (function () {
+      var main = document.getElementById('main');
+      var selected = [];
+      function render() {
+        var tickets = WT.getTickets(), current = WT.auth() || {}, counts = { held: 0, listed: 0, transferred: 0, sold: 0, scanned: 0 };
+        tickets.forEach(function (ticket) { counts[ticket.status] = (counts[ticket.status] || 0) + 1; });
+        document.getElementById('shell').innerHTML = WT.nav('../', 'reseller', true);
+        main.innerHTML = '<p class="eyebrow">Approved reseller · ' + WT.esc(current.identity || 'reseller') + '</p>' +
+          '<h1>Resale inventory</h1><p class="lede">Hold, list, transfer, and monitor every ticket in your wallet. Listings are capped by the administrator and every ownership change is written to the immutable audit trail.</p>' +
+          '<div class="grid stats"><div class="stat"><strong>' + (counts.held || 0) + '</strong><span>Held by you</span></div><div class="stat"><strong>' + (counts.listed || 0) + '</strong><span>Listed for resale</span></div><div class="stat"><strong>' + (counts.transferred || 0) + '</strong><span>Transferred</span></div><div class="stat"><strong>' + (counts.scanned || 0) + '</strong><span>Scanned in</span></div></div>' +
+          '<section class="card"><div class="card-header"><div><h2>My tickets</h2><p>Face value and live status for each ticket you hold.</p></div><a class="button secondary" href="../resale/' + WT.EVENT.slug + '/">Browse marketplace</a></div>' +
+          '<div class="toolbar"><span class="muted" id="selection-label">Select held tickets to list them.</span><button class="button" id="open-listing" disabled>List for resale</button></div>' +
+          '<div class="table-wrap"><table><thead><tr><th></th><th>Ticket</th><th>Seat</th><th>Face value</th><th>Status</th><th>Actions</th></tr></thead><tbody>' + tickets.map(function (ticket) {
+            var listing = WT.activeListingFor(ticket.key);
+            return '<tr><td>' + (ticket.status === 'held' ? '<input class="check ticket-check" type="checkbox" value="' + WT.esc(ticket.key) + '">' : '') + '</td><td>' + WT.formatTicketDetails(ticket) + (listing ? '<div class="ticket-meta">Ask ' + WT.money(listing.price) + ' · ' + WT.esc(listing.visibility) + '</div>' : '') + '</td><td>Section ' + WT.esc(ticket.section) + '<br><span class="muted">Row ' + WT.esc(ticket.row) + ' · Seat ' + WT.esc(ticket.seat) + '</span></td><td>' + WT.money(ticket.faceValue) + '</td><td>' + WT.statusBadge(ticket.status) + '</td><td><div class="row-actions">' + (ticket.status === 'held' ? '<a class="button small secondary" href="transfers/?ticket=' + encodeURIComponent(ticket.key) + '">Transfer</a>' : '') + (listing && listing.visibility === 'private' ? '<button class="button small secondary copy-link" data-link="' + WT.esc(WT.publicListingUrl(listing.id)) + '">Copy link</button>' : '') + (ticket.status === 'transferred' ? '<a class="button small secondary" href="transfers/">Manage</a>' : '') + '</div></td></tr>';
+          }).join('') + '</tbody></table></div></section>' +
+          '<section class="card" style="margin-top:18px"><div class="card-header"><div><h2>Safety controls</h2><p>Resale price cap: ' + WT.settings().resellerMarkupCap + '% above face value · transfer revocation window: ' + WT.settings().transferRevocationHours + ' hours.</p></div><span class="badge">Audit active</span></div><div class="notice">Client transfers use two OTP checkpoints: the reseller authorises the hand-off, then the client verifies their own phone before the ticket is shown.</div></section>';
+        bind();
+      }
+      function bind() {
+        document.querySelectorAll('.ticket-check').forEach(function (item) { item.addEventListener('change', updateSelection); });
+        document.getElementById('open-listing').addEventListener('click', openModal);
+        document.querySelectorAll('[data-close-modal]').forEach(function (item) { item.addEventListener('click', closeModal); });
+        document.querySelectorAll('.copy-link').forEach(function (item) { item.addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(item.dataset.link); WT.toast('Private listing link copied.'); }); });
+        document.getElementById('listing-form').addEventListener('submit', publishListing);
+      }
+      function updateSelection() {
+        selected = Array.prototype.slice.call(document.querySelectorAll('.ticket-check:checked')).map(function (item) { return item.value; });
+        document.getElementById('selection-label').textContent = selected.length ? selected.length + ' ticket' + (selected.length === 1 ? '' : 's') + ' selected.' : 'Select held tickets to list them.';
+        document.getElementById('open-listing').disabled = !selected.length;
+      }
+      function openModal() {
+        var tickets = selected.map(WT.getTicket), cap = Math.min.apply(Math, tickets.map(function (ticket) { return ticket.faceValue * (1 + WT.settings().resellerMarkupCap / 100); }));
+        document.getElementById('selected-summary').textContent = selected.length + ' selected · maximum allowed price is ' + WT.money(cap) + ' per ticket.';
+        document.getElementById('asking-price').value = Math.round(Math.min(cap, tickets[0].faceValue * 1.1) / 50) * 50;
+        document.getElementById('asking-price').max = Math.floor(cap);
+        document.getElementById('price-help').textContent = 'Admin cap: ' + WT.settings().resellerMarkupCap + '% above the lowest face value.';
+        document.getElementById('listing-quantity').value = selected.length; document.getElementById('listing-quantity').max = selected.length;
+        var date = new Date(WT.now() + WT.settings().listingExpiryDays * 86400000); document.getElementById('expiry').value = date.toISOString().slice(0, 10);
+        document.getElementById('list-modal').classList.add('open');
+      }
+      function closeModal() { document.getElementById('list-modal').classList.remove('open'); }
+      function publishListing(event) {
+        event.preventDefault();
+        var price = Number(document.getElementById('asking-price').value), quantity = Number(document.getElementById('listing-quantity').value), visibility = document.getElementById('visibility').value, expiry = new Date(document.getElementById('expiry').value + 'T23:59:59').getTime(), tickets = selected.map(WT.getTicket), cap = Math.min.apply(Math, tickets.map(function (ticket) { return ticket.faceValue * (1 + WT.settings().resellerMarkupCap / 100); }));
+        if (!WT.settings().resaleEnabled) { WT.toast('Resale is currently disabled by admin.', 'error'); return; }
+        if (!price || price > cap) { WT.toast('Price exceeds the administrator cap of ' + WT.money(cap) + '.', 'error'); return; }
+        if (!quantity || quantity > selected.length || !expiry || expiry <= WT.now() || expiry > WT.now() + WT.settings().listingExpiryDays * 86400000 + 86400000) { WT.toast('Check the quantity and expiry date.', 'error'); return; }
+        if (visibility === 'private' && !WT.settings().privateListingsEnabled) { WT.toast('Private listings are disabled by admin.', 'error'); return; }
+        var listingRows = WT.getListings(), ticketRows = WT.getTickets(), published = selected.slice(0, quantity).map(function (key) { var listing = { id: WT.uid('LST'), ticketKey: key, price: price, quantity: 1, visibility: visibility, createdAt: WT.now(), expiry: expiry, status: 'active' }; listingRows.push(listing); var ticket = ticketRows.filter(function (item) { return item.key === key; })[0]; ticket.status = 'listed'; return listing; });
+        WT.write(WT.KEYS.listings, listingRows); WT.write(WT.KEYS.tickets, ticketRows); WT.audit('listing.created', published.length + ' ticket(s) listed at ' + WT.money(price) + ' each'); closeModal(); WT.toast('Listing published.'); selected = []; render();
+      }
+      if (WT.requireReseller('../')) render();
+    }());
+  </script>
+</body>
+</html>

@@ -46,6 +46,7 @@
       <p><strong>Tuesday, 5 January 2027 · 11:00</strong></p>
       <p>Raila Odinga International Stadium, Nairobi</p>
       <a class="button" href="../../events/fc-bayern-munchen-vs-afc-ajax/seats/">View seat map</a>
+      <a class="button" id="reseller-portal" href="../../reseller/" style="display:none;margin-left:8px;background:#15131a">Reseller portal</a>
     </section>
     <section class="signed-out" id="signed-out">
       <p>You are not signed in yet.</p>
@@ -70,6 +71,7 @@
       var auth = JSON.parse(localStorage.getItem('webticket-auth') || 'null');
       if (auth && auth.signedIn && auth.identity) document.getElementById('welcome').textContent = 'Signed in as ' + auth.identity + '. Your tickets are listed below.';
       else { document.getElementById('ticket').style.display = 'none'; document.getElementById('signed-out').style.display = 'block'; }
+      if (auth && auth.signedIn && auth.role === 'reseller' && auth.roleApproved) document.getElementById('reseller-portal').style.display = 'inline-flex';
     } catch (ignore) {}
   </script>
 </body>

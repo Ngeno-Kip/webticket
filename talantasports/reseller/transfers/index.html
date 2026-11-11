@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transfers · Talanta Sports City</title>
+  <link rel="stylesheet" href="../../resale.css">
+</head>
+<body>
+  <script src="../../resale-app.js"></script><script>WT.boot();</script>
+  <div id="shell"></div>
+  <main class="page" id="main"></main>
+  <footer><a href="../../">Talanta Sports City</a> · Secure ticket transfer</footer>
+  <script>
+    (function () {
+      var main = document.getElementById('main'), queryTicket = new URLSearchParams(window.location.search).get('ticket'), resellerOtpValue = null;
+      function render() {
+        var transfers = WT.getTransfers(), tickets = WT.getTickets(), current = WT.auth() || {};
+        document.getElementById('shell').innerHTML = WT.nav('../../', 'transfers', true);
+        main.innerHTML = '<p class="eyebrow">Module B · OTP transfer</p><h1>Transfer to a client</h1><p class="lede">Choose a held ticket, enter the client details, then confirm the hand-off with an OTP sent to your registered reseller phone.</p>' +
+          '<div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(300px,.8fr);align-items:start"><section class="card"><div class="card-header"><div><h2>New transfer</h2><p>Reseller authorisation goes to ' + WT.esc(current.registeredPhone || '+254 712 345 678') + '.</p></div><span class="badge">OTP protected</span></div><form id="transfer-form"><div class="form-grid"><div class="field full"><label for="ticket">Ticket</label><select id="ticket" required>' + tickets.filter(function (ticket) { return ticket.status === 'held'; }).map(function (ticket) { return '<option value="' + WT.esc(ticket.key) + '" ' + (queryTicket === ticket.key ? 'selected' : '') + '>' + WT.esc(ticket.publicRef) + ' · Section ' + WT.esc(ticket.section) + ' / Row ' + WT.esc(ticket.row) + ' / Seat ' + WT.esc(ticket.seat) + ' · ' + WT.money(ticket.faceValue) + '</option>'; }).join('') + '</select></div><div class="field"><label for="client-name">Client full name</label><input id="client-name" required placeholder="Amina Wanjiku"></div><div class="field"><label for="client-phone">Client phone</label><input id="client-phone" required placeholder="+254712345678" pattern="[+]2547[0-9]{8}"><span class="help">E.164 format: +254 followed by 9 digits.</span></div><div class="field"><label for="client-email">Client email</label><input id="client-email" type="email" required placeholder="client@example.com"></div><div class="field"><label for="national-id">National ID <span class="muted">(optional)</span></label><input id="national-id" placeholder="Optional"></div></div><div class="action-row"><button class="button" type="submit">Send reseller OTP</button></div></form><div id="reseller-otp" style="display:none;margin-top:22px"><div class="notice">OTP sent to your registered reseller phone. In this local prototype, use the demo code shown below.</div><div class="otp-code" id="otp-code"></div><div class="field"><label for="reseller-code">Reseller OTP</label><input id="reseller-code" inputmode="numeric" maxlength="6" placeholder="6 digits"></div><div class="action-row"><button class="button" id="confirm-transfer" type="button">Authorise transfer</button></div></div></section>' +
+          '<section class="card"><div class="card-header"><div><h2>Transfer history</h2><p>Revoke before scan-in and within the admin window.</p></div></div><div id="transfer-list">' + (transfers.length ? transfers.map(transferRow).join('') : '<div class="empty">No transfers yet.</div>') + '</div></section></div>';
+        bind();
+      }
+      function transferRow(transfer) {
+        var ticket = WT.getTicket(transfer.ticketKey), scanned = ticket && ticket.status === 'scanned', withinWindow = WT.now() < transfer.createdAt + WT.settings().transferRevocationHours * 3600000;
+        return '<div class="ticket-pass" style="margin-bottom:12px"><div class="card-header"><div><h3>' + WT.esc(transfer.clientName) + '</h3><p>' + WT.esc(transfer.phone) + ' · ' + WT.esc(transfer.email) + '</p></div>' + WT.statusBadge(transfer.status) + '</div>' + (ticket ? WT.formatTicketDetails(ticket) : '<div class="muted">Ticket unavailable</div>') + '<div class="ticket-meta">Created ' + WT.dateTime(transfer.createdAt) + ' · Link expires ' + WT.dateTime(transfer.expiresAt) + '</div><div class="action-row"><a class="button small secondary" target="_blank" href="' + WT.esc(WT.publicTransferUrl(transfer.token)) + '">Open client link</a>' + (transfer.status === 'active' && !scanned && withinWindow ? '<button class="button small danger revoke-transfer" data-id="' + WT.esc(transfer.id) + '">Revoke</button>' : '') + (scanned ? '<span class="help">Final after scan-in.</span>' : '') + '</div></div>';
+      }
+      function bind() {
+        document.getElementById('transfer-form').addEventListener('submit', function (event) { event.preventDefault(); var phone = document.getElementById('client-phone').value.trim(); if (!/^\+2547[0-9]{8}$/.test(phone)) { WT.toast('Use E.164 format, for example +254712345678.', 'error'); return; } resellerOtpValue = WT.sendOtp((WT.auth() || {}).registeredPhone || (WT.auth() || {}).identity || 'reseller', 'reseller-transfer'); document.getElementById('reseller-otp').style.display = 'block'; document.getElementById('otp-code').textContent = 'Demo reseller OTP: ' + resellerOtpValue; document.getElementById('reseller-code').focus(); });
+        document.getElementById('confirm-transfer').addEventListener('click', confirmTransfer);
+        document.querySelectorAll('.revoke-transfer').forEach(function (button) { button.addEventListener('click', function () { var rows = WT.getTransfers(), transfer = rows.filter(function (item) { return item.id === button.dataset.id; })[0], ticketRows = WT.getTickets(), ticket = transfer && ticketRows.filter(function (item) { return item.key === transfer.ticketKey; })[0]; if (!transfer || !ticket || ticket.status === 'scanned') { WT.toast('This transfer is already final.', 'error'); return; } transfer.status = 'revoked'; ticket.status = 'held'; WT.write(WT.KEYS.transfers, rows); WT.write(WT.KEYS.tickets, ticketRows); WT.audit('transfer.revoked', transfer.id + ' revoked before scan-in'); WT.toast('Transfer revoked.'); render(); }); });
+      }
+      function confirmTransfer() {
+        var code = document.getElementById('reseller-code').value.trim(), current = WT.auth() || {}, target = current.registeredPhone || current.identity || 'reseller';
+        if (!WT.verifyOtp(target, 'reseller-transfer', code)) { WT.toast('That reseller OTP is invalid or expired.', 'error'); return; }
+        var key = document.getElementById('ticket').value, ticketRows = WT.getTickets(), ticket = ticketRows.filter(function (item) { return item.key === key; })[0];
+        if (!ticket || ticket.status !== 'held') { WT.toast('Only held tickets can be transferred.', 'error'); return; }
+        var transfer = { id: WT.uid('TRF'), ticketKey: key, clientName: document.getElementById('client-name').value.trim(), phone: document.getElementById('client-phone').value.trim(), email: document.getElementById('client-email').value.trim(), nationalId: document.getElementById('national-id').value.trim(), token: WT.uid('TKN') + '-' + Math.random().toString(36).slice(2, 8), status: 'active', createdAt: WT.now(), expiresAt: WT.now() + WT.settings().clientLinkExpiryHours * 3600000, clientOtpVerified: false };
+        ticket.status = 'transferred'; ticket.holderName = transfer.clientName; var transfers = WT.getTransfers(); transfers.unshift(transfer); WT.write(WT.KEYS.transfers, transfers); WT.write(WT.KEYS.tickets, ticketRows); WT.audit('transfer.created', transfer.id + ' authorised by reseller; client SMS and email queued'); WT.toast('Transfer created. SMS and email queued.'); render();
+      }
+      if (WT.requireReseller('../../')) render();
+    }());
+  </script>
+</body>
+</html>

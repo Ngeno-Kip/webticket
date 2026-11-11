@@ -1,4 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "trailingSlash": true
+  "trailingSlash": true,
+  "rewrites": [
+    { "source": "/talantasports/t/:transferToken/", "destination": "/talantasports/t/?token=:transferToken" },
+    { "source": "/t/:transferToken/", "destination": "/talantasports/t/?token=:transferToken" }
+  ]
 }

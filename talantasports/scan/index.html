@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gate scanner · Talanta Sports City</title>
+  <link rel="stylesheet" href="../resale.css">
+</head>
+<body>
+  <script src="../resale-app.js"></script><script>WT.boot();</script>
+  <div id="shell"></div>
+  <main class="page" id="main"></main>
+  <footer><a href="../">Talanta Sports City</a> · Scanner actions are logged with gate, staff, device, and timestamp.</footer>
+  <script>
+    (function () {
+      var main = document.getElementById('main');
+      document.getElementById('shell').innerHTML = WT.nav('../', 'scan', false);
+      main.innerHTML = '<p class="eyebrow">Module C · gate operations</p><h1>Ticket scanner</h1><p class="lede">Validate a rotating QR payload from the client ticket or enter the opaque ticket code manually. Raw ticket identifiers are never displayed.</p><div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(300px,.75fr);align-items:start"><section class="card"><div class="card-header"><div><h2>Scan or enter code</h2><p>Event: ' + WT.esc(WT.EVENT.name) + ' · Gate staff device: <span id="device-id"></span></p></div><span class="badge">Live validation</span></div><div class="action-row" style="margin-top:0"><button class="button secondary" id="camera-scan" type="button">Open camera</button><label class="help"><input id="offline-mode" type="checkbox"> Offline manifest mode</label></div><div class="form-grid" style="margin-top:18px"><div class="field full"><label for="scan-code">QR payload or manual code</label><input id="scan-code" placeholder="TSC-401A" autocomplete="off"></div><div class="field"><label for="gate">Gate</label><select id="gate"><option>North Gate</option><option>South Gate</option><option>East Gate</option><option>West Gate</option></select></div><div class="field"><label for="staff">Staff ID</label><input id="staff" value="GATE-STAFF-01"></div></div><div class="action-row"><button class="button" id="validate" type="button">Validate ticket</button></div><div class="scan-result" id="scan-result"><h2 id="scan-title"></h2><p id="scan-detail"></p></div></section><section class="card"><div class="card-header"><div><h2>Offline readiness</h2><p>Signed manifest for this event.</p></div><span class="badge" id="sync-badge">Online</span></div><div class="notice">When offline mode is enabled, only the signed local manifest is checked. Results are queued and flagged for conflict review when the device reconnects.</div><p class="muted" id="manifest-meta"></p><button class="button secondary" id="sync" type="button">Sync queued scans</button></section></div><section class="card" style="margin-top:18px"><div class="card-header"><div><h2>Recent scan audit</h2><p>Latest gate decisions for this browser.</p></div></div><div class="audit" id="audit"></div></section>';
+      var deviceId = localStorage.getItem('webticket-scanner-device') || 'SCN-' + Math.random().toString(36).slice(2, 8).toUpperCase(); localStorage.setItem('webticket-scanner-device', deviceId); document.getElementById('device-id').textContent = deviceId; document.getElementById('manifest-meta').textContent = 'Manifest contains ' + WT.getTickets().length + ' event ticket hashes · refreshed ' + WT.dateTime(WT.now()) + '.';
+      function renderAudit() { var rows = WT.read(WT.KEYS.audit, []).filter(function (row) { return row.action.indexOf('scan.') === 0; }).slice(0, 8); document.getElementById('audit').innerHTML = rows.length ? rows.map(function (row) { return '<div class="audit-row"><span>' + WT.dateTime(row.at) + '</span><strong>' + WT.esc(row.action) + '</strong><span>' + WT.esc(row.detail) + '</span></div>'; }).join('') : '<div class="empty">No scans logged on this device.</div>'; }
+      function result(kind, title, detail) { var box = document.getElementById('scan-result'); box.className = 'scan-result show ' + (kind === 'valid' ? '' : kind); document.getElementById('scan-title').textContent = title; document.getElementById('scan-detail').innerHTML = detail; }
+      document.getElementById('validate').addEventListener('click', function () {
+        var raw = document.getElementById('scan-code').value.trim(), offline = document.getElementById('offline-mode').checked, gate = document.getElementById('gate').value, staff = document.getElementById('staff').value.trim() || 'unknown', parts = raw.split('|');
+        if (parts.length > 1 && parts[0] !== WT.EVENT.slug) { WT.audit('scan.invalid', 'Wrong event/date payload at ' + gate); result('invalid', 'INVALID', 'Wrong event or date. This code belongs to another event.'); renderAudit(); return; }
+        var code = (parts.length > 1 ? parts[1] : raw).toUpperCase(), ticket = WT.getTickets().filter(function (item) { return item.publicRef.toUpperCase() === code; })[0], transfer = ticket && WT.getTransfers().filter(function (item) { return item.ticketKey === ticket.key && item.status === 'revoked'; })[0];
+        if (!ticket) { WT.audit('scan.invalid', 'Unknown signed hash at ' + gate); result('invalid', 'INVALID', 'Code not found in the event manifest.'); renderAudit(); return; }
+        if (transfer || ticket.frozen) { WT.audit('scan.invalid', ticket.publicRef + ' revoked or frozen at ' + gate); result('invalid', 'INVALID', 'Ticket is revoked or frozen by an administrator.'); renderAudit(); return; }
+        if (ticket.status === 'scanned') { WT.audit('scan.used', ticket.publicRef + ' already scanned at ' + gate); result('used', 'ALREADY USED', 'First scan: ' + WT.dateTime(ticket.scannedAt) + '. Ask a supervisor to review the audit trail.'); renderAudit(); return; }
+        ticket.status = 'scanned'; ticket.scannedAt = WT.now(); ticket.scan = { gate: gate, staff: staff, device: deviceId, offline: offline }; var ticketRows = WT.getTickets().map(function (item) { return item.key === ticket.key ? ticket : item; }); WT.write(WT.KEYS.tickets, ticketRows); WT.audit('scan.valid', ticket.publicRef + ' accepted at ' + gate + ' by ' + staff + (offline ? ' (offline queued)' : '')); result('valid', 'VALID', '<strong>Seat:</strong> Section ' + WT.esc(ticket.section) + ' · Row ' + WT.esc(ticket.row) + ' · Seat ' + WT.esc(ticket.seat) + '<br><strong>Gate:</strong> ' + WT.esc(ticket.gate) + '<br>Scan recorded ' + WT.dateTime(ticket.scannedAt) + (offline ? '<br><span class="help">Queued for sync when online.</span>' : '')); renderAudit();
+      });
+      document.getElementById('camera-scan').addEventListener('click', function () { WT.toast('Camera permission would start the QR reader in the production app. Manual validation is ready.', ''); document.getElementById('scan-code').focus(); });
+      document.getElementById('offline-mode').addEventListener('change', function () { document.getElementById('sync-badge').textContent = this.checked ? 'Offline' : 'Online'; });
+      document.getElementById('sync').addEventListener('click', function () { WT.audit('scan.sync', 'Queued device scans synchronized'); WT.toast('Queued scans synchronized and conflicts flagged for review.'); renderAudit(); });
+      renderAudit();
+    }());
+  </script>
+</body>
+</html>
